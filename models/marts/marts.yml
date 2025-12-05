@@ -26,3 +26,20 @@ models:
               to: ref('dim_users')
               field: user_id
 
+  - name: user_engagement_metrics
+    description: "User engagement metrics aggregated from events. Demonstrates incremental business value."
+    columns:
+      - name: user_id
+        description: "Unique identifier for the user"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_users')
+              field: user_id
+      - name: user_segment
+        description: "User classification based on activity level"
+        tests:
+          - accepted_values:
+              values: ['power_user', 'regular_user', 'casual_user', 'inactive']
+
