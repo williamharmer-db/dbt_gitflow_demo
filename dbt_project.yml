@@ -1,0 +1,39 @@
+name: 'tmicc_analytics'
+version: '1.0.0'
+config-version: 2
+
+profile: 'databricks_tmicc'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"  # directory which will store compiled SQL files
+clean-targets:         # directories to be removed by 'dbt clean'
+  - "target"
+  - "dbt_packages"
+
+models:
+  tmicc_analytics:
+    # Configs for all models
+    materialized: view # Default to view
+    +store_failures: true # Good for debugging
+    
+    staging:
+      # Staging models are views or ephemeral
+      materialized: view
+      +schema: staging
+    
+    intermediate:
+      materialized: ephemeral
+      
+    marts:
+      # Marts are tables (incremental or full refresh)
+      materialized: table
+      +schema: marts
+      # Idempotency & Immutability principles
+      # We prefer table/incremental over view for marts for performance
+

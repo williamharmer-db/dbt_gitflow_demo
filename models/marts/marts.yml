@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: dim_users
+    description: User dimension table. Rebuilt fully to ensure consistency.
+    columns:
+      - name: user_id
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_events
+    description: "Event fact table. Incremental append model."
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 0
+          max_value: 1000000000
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: user_id
+        tests:
+          - relationships:
+              to: ref('dim_users')
+              field: user_id
+

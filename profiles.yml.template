@@ -1,0 +1,27 @@
+databricks_tmicc:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      schema: "{{ env_var('DBT_DEV_SCHEMA', 'dbt_user_default') }}" # e.g. dbt_alice
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      threads: 4
+
+    ci:
+      type: databricks
+      schema: ci_placeholder # This is overridden by the generate_schema_name macro
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}" # Service Principal Token
+      threads: 8
+
+    prod:
+      type: databricks
+      schema: db_analytics_prod
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}" # Service Principal Token
+      threads: 8
+

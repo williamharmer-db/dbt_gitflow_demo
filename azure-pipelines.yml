@@ -1,0 +1,99 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Assumes a Variable Group 'dbt-databricks-credentials' exists in ADO Library
+  # Variables required: DATABRICKS_HOST, DATABRICKS_HTTP_PATH, DATABRICKS_TOKEN
+  - group: dbt-databricks-credentials 
+  - name: DBT_PROFILES_DIR
+    value: $(System.DefaultWorkingDirectory)
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.9'
+      addToPath: true
+    displayName: 'Set Python Version'
+
+  - script: |
+      pip install dbt-databricks sqlfluff
+    displayName: 'Install dbt and Utilities'
+
+  - script: |
+      dbt deps
+    displayName: 'Install dbt Packages'
+
+  # 1. Linting (Quality Gate)
+  - script: |
+      sqlfluff lint models/
+    displayName: 'Lint SQL'
+
+  # 2. Download Production State (Crucial for Slim CI)
+  # We need the manifest.json from the last successful run on main to compare against.
+  - task: DownloadBuildArtifacts@0
+    inputs:
+      buildType: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: '$(System.DefinitionId)'
+      buildVersionToDownload: 'latestFromBranch'
+      branchName: 'refs/heads/main'
+      downloadType: 'single'
+      artifactName: 'dbt-manifest'
+      downloadPath: '$(System.DefaultWorkingDirectory)/prod_state'
+    displayName: 'Download Production State'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+
+  # 3. Slim CI Build (The "State Awareness" Principle)
+  # - state:modified+ : Run only changed models and their downstream dependencies
+  # - defer : Use production tables for upstream dependencies that haven't changed (don't rebuild the world)
+  - script: |
+      echo "Running dbt Build in CI Mode..."
+      dbt build --select state:modified+ --defer --state prod_state/dbt-manifest
+    displayName: 'Run Slim CI Build'
+    env:
+      # Secrets must be mapped explicitly
+      DATABRICKS_HOST: $(DATABRICKS_HOST)
+      DATABRICKS_HTTP_PATH: $(DATABRICKS_HTTP_PATH)
+      DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+      # Passes PR ID to generate unique schema: db_ci_pr_123
+      DBT_CLOUD_PR_ID: $(System.PullRequest.PullRequestId)
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+
+  # 4. Production Deployment
+  # Only runs on merge to main
+  - script: |
+      echo "Running Full Production Build..."
+      dbt build
+    displayName: 'Run Production Deployment'
+    env:
+      DATABRICKS_HOST: $(DATABRICKS_HOST)
+      DATABRICKS_HTTP_PATH: $(DATABRICKS_HTTP_PATH)
+      DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+
+  # 5. Publish Artifacts
+  # Save manifest.json so future CI runs can use it for state comparison
+  - publish: target/manifest.json
+    artifact: dbt-manifest
+    displayName: 'Publish Manifest Artifact'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+
+  - script: |
+      dbt docs generate
+    displayName: 'Generate Documentation'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    env:
+      DATABRICKS_HOST: $(DATABRICKS_HOST)
+      DATABRICKS_HTTP_PATH: $(DATABRICKS_HTTP_PATH)
+      DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+

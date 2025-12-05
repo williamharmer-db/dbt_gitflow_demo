@@ -1,0 +1,11 @@
+target/
+dbt_packages/
+logs/
+.env
+*.pyc
+__pycache__/
+.DS_Store
+venv/
+.venv/
+*.egg-info/
+

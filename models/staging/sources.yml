@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw_data
+    description: Raw data from the application
+    database: raw_lake # Example database
+    schema: app_events
+    tables:
+      - name: users
+        description: Raw user data
+      - name: events
+        description: Raw event stream
+
