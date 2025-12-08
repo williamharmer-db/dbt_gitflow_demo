@@ -1,7 +1,7 @@
 {{
     config(
         materialized='incremental',
-        unique_key='event_id',
+        unique_key='order_id',
         file_format='delta',
         incremental_strategy='merge'
     )
@@ -10,21 +10,21 @@
 -- Principle: Idempotency ("Running it twice shouldn't break it")
 -- Principle: Immutability (Append logic preferred)
 
-with events as (
-    select * from {{ ref('stg_events') }}
+with orders as (
+    select * from {{ ref('stg_bakehouse_orders') }}
 )
 
 select
-    event_id,
-    user_id,
-    event_type,
-    event_timestamp,
-    payload,
+    order_id,
+    customer_id,
+    order_date,
+    order_status,
+    order_total,
     current_timestamp() as dbt_loaded_at
-from events
+from orders
 
 {% if is_incremental() %}
   -- State Awareness: Only process new data
-  where event_timestamp > (select max(event_timestamp) from {{ this }})
+  where order_date > (select max(order_date) from {{ this }})
 {% endif %}
 

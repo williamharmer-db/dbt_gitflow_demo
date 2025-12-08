@@ -1,45 +1,53 @@
 version: 2
 
 models:
-  - name: dim_users
-    description: User dimension table. Rebuilt fully to ensure consistency.
+  - name: dim_customers
+    description: Customer dimension table built from bakehouse catalog. Rebuilt fully to ensure consistency.
     columns:
-      - name: user_id
+      - name: customer_id
         tests:
           - unique
           - not_null
+      - name: email
+        tests:
+          - unique
 
-  - name: fct_events
-    description: "Event fact table. Incremental append model."
+  - name: fct_orders
+    description: "Order fact table from bakehouse catalog. Incremental append model."
     tests:
       - dbt_expectations.expect_table_row_count_to_be_between:
           min_value: 0
           max_value: 1000000000
     columns:
-      - name: event_id
+      - name: order_id
         tests:
           - unique
           - not_null
-      - name: user_id
+      - name: customer_id
         tests:
+          - not_null
           - relationships:
-              to: ref('dim_users')
-              field: user_id
+              to: ref('dim_customers')
+              field: customer_id
 
-  - name: user_engagement_metrics
-    description: "User engagement metrics aggregated from events. Demonstrates incremental business value."
+  - name: customer_order_metrics
+    description: "Customer order metrics aggregated from bakehouse data. Demonstrates incremental business value."
     columns:
-      - name: user_id
-        description: "Unique identifier for the user"
+      - name: customer_id
+        description: "Unique identifier for the customer"
         tests:
           - unique
           - not_null
           - relationships:
-              to: ref('dim_users')
-              field: user_id
-      - name: user_segment
-        description: "User classification based on activity level"
+              to: ref('dim_customers')
+              field: customer_id
+      - name: customer_segment
+        description: "Customer classification based on order activity level"
         tests:
           - accepted_values:
-              values: ['power_user', 'regular_user', 'casual_user', 'inactive']
+              values: ['vip', 'loyal', 'regular', 'inactive']
+      - name: lifetime_value
+        description: "Total value of all orders for this customer"
+        tests:
+          - not_null
 

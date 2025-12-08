@@ -1,13 +1,15 @@
 version: 2
 
 sources:
-  - name: raw_data
-    description: Raw data from the application
-    database: raw_lake # Example database
-    schema: app_events
+  - name: bakehouse
+    description: Raw data from the bakehouse catalog in Databricks
+    database: bakehouse
+    schema: default  # Update this to the actual schema name in bakehouse
     tables:
-      - name: users
-        description: Raw user data
-      - name: events
-        description: Raw event stream
+      - name: customers
+        description: Customer data from bakehouse
+      - name: orders
+        description: Order transaction data from bakehouse
+      - name: products
+        description: Product catalog from bakehouse
 
